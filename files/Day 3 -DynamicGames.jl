@@ -281,4 +281,3 @@ Z[:,end] = BigP*nf';
 LikeFun = b -> sum(log.(1 .+ exp.(Z*b+FV))-Firm_vec.*(Z*b+FV));
 
 result = optimize(LikeFun, 0.1*ones(5,1), LBFGS(); autodiff = :forward);
-
