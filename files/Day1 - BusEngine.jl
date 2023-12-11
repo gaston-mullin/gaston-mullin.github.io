@@ -102,7 +102,7 @@ Random.seed!(3000);
 XData, SData, DData, XIndexData, TData, NData = generate_data(N,T,X,S,F1,F2,F2_cumul,β,θ);
 
 # Showing the mileage of one bus.
-plot(XData[1:2,:]',ylabel="Mileage",xlabel="Time")
+plot(XData[1:2,:]',ylabel="Mileage",xlabel="Time",label = ["Bus 1" "Bus 2"])
 ylims!(0, 15)
 
 # Showing the frequency of engine replacement in the data.
@@ -123,7 +123,7 @@ never_reached=isnan.(ccp_hat_cell); # Keep track of states that never occur in t
 ccp_hat_cell[never_reached] .= 0.5; # Provide a value for the never reached states. 0.5 may not correspond well to what the data sugests...
 ccp_hat_cell=max.(epsilon, min.(1-epsilon,ccp_hat_cell)); # Makes sure that all probabilities are in the open interval (0,1), as "1" and "0" observations cause problems.
 
-plot(X[never_reached[:,1].==0],ccp_hat_cell[never_reached[:,1].==0,1],xlabel="Mileage (x)",ylabel="Conditional probability, s=1")
+plot(X[never_reached[:,1].==0],ccp_hat_cell[never_reached[:,1].==0,1],xlabel="Mileage (x)",ylabel="Conditional probability, s=1",label = "Prob")
 
 
 # Estimate the ccps in a flexible parametric logit
@@ -143,7 +143,7 @@ xb_logit[:,2] = logit_params_ccp[5] .+ xb_logit[:,1] + logit_params_ccp[6]*X + l
 
 ccp_hat_logit = exp.(xb_logit)./(1 .+ exp.(xb_logit));
 
-plot(X,ccp_hat_logit[:,1],xlabel="Mileage (x)",ylabel="Conditional probability, s=1")
+plot(X,ccp_hat_logit[:,1],xlabel="Mileage (x)",ylabel="Conditional probability, s=1",label = "Prob")
 
 
 # Get all elements to the correct dimensions
@@ -222,3 +222,5 @@ end
 
 theta_hat_fiml = fiml_estimation(DData,XData,SData,X,S,F1,F2,β);
 println(theta_hat_fiml)
+
+
