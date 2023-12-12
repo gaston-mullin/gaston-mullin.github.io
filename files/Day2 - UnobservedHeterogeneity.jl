@@ -33,9 +33,35 @@ tolerance=1e-6;
 
 
 EZ = [(pi_0[j]*pdf(Poisson(theta_0[j]),Y[i]))/(sum(pi_0[k]*pdf(Poisson(theta_0[k]),Y[i]) for k∈eachindex(pi_0))) for i ∈ eachindex(Y), j ∈ eachindex(pi_0)];
-EZ[1:5,:] # Showing how EZ (matrix NxJ looks, first 5 rows displayed here)
+EZ[1:5,:] # Showing how EZ (matrix NxJ looks, first 5 rows displayed here
+
+# Alternatively:
+
+# For loops (not in array comprehension mode)
+EZ_2 = zeros(length(Y),length(pi_0));
+
+for i in eachindex(Y)
+    for j in eachindex(pi_0)
+        EZ_2[i,j] = pdf(Poisson(theta_0[j]),Y[i]);
+    end
+end
+
+EZ_2_rowsum = sum(EZ_2,dims=2);
+for j in eachindex(pi_0)
+    EZ_2[:,j] = EZ_2[:,j]./EZ_2_rowsum;
+end
+
+# Vectorized:
+
+EZ_3 = pdf.(Poisson.(theta_0'),Y);
+EZ_3_rowsum = repeat(sum(EZ_3,dims=2),1,2);
+EZ_3 = EZ_3./EZ_3_rowsum;
+
 
 pi_0=mean(EZ,dims=1);
+
+theta_fun(theta_0) = -sum(EZ[i,j]*log(pdf(Poisson(theta_0[j]),Y[i])) for i ∈ eachindex(Y), j ∈ eachindex(pi_0));
+b=optimize(theta_fun,theta_0);
 
 # Resetting the initial values for optimization
 
