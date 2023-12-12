@@ -1,27 +1,27 @@
 # Load the relevant packages
 using StatsKit, ForwardDiff, Ipopt, NLsolve, Optim, Parameters, Zygote, LinearAlgebra, Random, Plots, BenchmarkTools, StatsBase, Distributions
 
-
 # Uncomment following lines to install one or several packages that are missing
 
 #using Pkg
 #Pkg.add(["StatsKit", "ForwardDiff", "Ipopt", "NLsolve", "Optim", "Parameters", "Zygote", "LinearAlgebra", "Random", "Plots", "BenchmarkTools", "StatsBase", "Distributions"])
 
+# Generate data
 Random.seed!(3000);
 nobs=1000;
 mix_dist = MixtureModel(Poisson[Poisson(2.0), Poisson(8.0)], [0.4, 0.6]);
 Y=rand(mix_dist,nobs);
 
-ex_hist = histogram(Y,normalize=:pdf, bins=0:20)
+ex_hist = histogram(Y,normalize=:pdf, bins=0:20,label=nothing,xlabel="x",ylabel = "Relative frequency")
 
 poisson_hat = fit_mle(Poisson, Y);
 #geometric_hat = fit_mle(Geometric,Y);
 
-histogram(Y,normalize=:pdf, bins=0:20)
-plot!(pdf.(poisson_hat,0:20),linewidth=3)
+histogram(Y,normalize=:pdf, bins=0:20,label="Rel. Freq")
+plot!(pdf.(poisson_hat,0:20),linewidth=3,label = "PMF of Poisson fit")
 
 # Step 1 (a): initial values for theta and lambda
-theta_0=[1.0,3.0];
+theta_0=[1.0,2.0];
 pi_0=[0.5,0.5];
 
 # Step 1 (b): specify convergence criteria
@@ -32,15 +32,35 @@ normdiff=10.0;
 tolerance=1e-6;
 
 
-    while normdiff>tolerance && iter<=maxiter
+EZ = [(pi_0[j]*pdf(Poisson(theta_0[j]),Y[i]))/(sum(pi_0[k]*pdf(Poisson(theta_0[k]),Y[i]) for k∈eachindex(pi_0))) for i ∈ eachindex(Y), j ∈ eachindex(pi_0)];
+EZ[1:5,:] # Showing how EZ (matrix NxJ looks, first 5 rows displayed here)
+
+pi_0=mean(EZ,dims=1);
+
+# Resetting the initial values for optimization
+
+# Step 1 (a): initial values for theta and lambda
+theta_0=[1.0,2.0];
+pi_0=[0.5,0.5];
+
+# Step 1 (b): specify convergence criteria
+iter=1;
+maxiter=1000;
+lik0=10.0;
+normdiff=10.0;
+tolerance=1e-6;
+
+# Putting everything in a loop
+
+while normdiff>tolerance && iter<=maxiter
         EZ = [(pi_0[j]*pdf(Poisson(theta_0[j]),Y[i]))/(sum(pi_0[k]*pdf(Poisson(theta_0[k]),Y[i]) for k∈eachindex(pi_0))) for i ∈ eachindex(Y), j ∈ eachindex(pi_0)];
-        theta_fun(theta_0) = -sum(EZ[i,j]*log(pdf(Poisson(theta_0[j]),Y[i])) for i ∈ eachindex(Y), j ∈ eachindex(pi_0))
         pi_0=mean(EZ,dims=1);
+        theta_fun(theta_0) = -sum(EZ[i,j]*log(pdf(Poisson(theta_0[j]),Y[i])) for i ∈ eachindex(Y), j ∈ eachindex(pi_0));
         b=optimize(theta_fun,theta_0);
         # Calculate likelihood and update for next iteration:
         theta_0=b.minimizer;
         lik1 = -theta_fun(theta_0) + sum(log(pi_0[j])*EZ[i,j] for i∈eachindex(Y), j∈eachindex(pi_0));
-        likdiff=abs(lik1-lik0);
+        normdiff=abs(lik1-lik0);
         lik0=lik1;
         iter=iter+1;
     end
@@ -49,8 +69,25 @@ println(string("π_1, π_2 estimated to:",round.(pi_0,digits=3)))
 println(string("θ_1, θ_2 estimated to:",round.(theta_0,digits=3)))
 
 
-histogram(Y,normalize=:pdf, bins=0:20)
-plot!(pdf.(Poisson(theta_0[1]),0:20)*pi_0[1] .+ pdf.(Poisson(theta_0[2]),0:20)*pi_0[2],linewidth=3)
+# Maximizing the whole likelihood at once
+
+using OptimizationOptimJL 
+#using Pkg
+#Pkg.add("OptimizationOptimJL")
+
+whole_lik(params,data) = -sum(log.(params[3].*pdf.(Poisson(params[1]),data) + (1-params[3]).*pdf.(Poisson(params[2]),data)));
+
+p0 =  [1,2,0.5]
+
+optf = OptimizationFunction(whole_lik, Optimization.AutoForwardDiff())
+prob = OptimizationProblem(optf,p0,Y, lb = [0,0,0], ub = [Inf,Inf,1])
+sol = solve(prob, NelderMead());
+
+println(string("θ_1, θ_2, π_1 estimated to:",round.(sol.u,digits=3)))
+
+
+histogram(Y,normalize=:pdf, bins=0:20,label="Rel. Freq")
+plot!(pdf.(Poisson(theta_0[1]),0:20)*pi_0[1] .+ pdf.(Poisson(theta_0[2]),0:20)*pi_0[2],linewidth=3,label = "PMF of mixture distribution")
 
 # Data generation (similar to yesterday's)
 
@@ -147,6 +184,7 @@ XData, SData, DData, XIndexData, TData, NData = generate_data(N,T,X,S,F1,F2,F_cu
 pi_0=0.5;
 theta_0=[0.1,0.1,0.1];
 q=[pi_0*ones(N,1) (1-pi_0)*ones(N,1)];
+
 ccp_hat = [sum(repeat(q[:,s],T,1).*(vec(XIndexData) .== j).* (vec(DData) .== 1.0))/sum(repeat(q[:,s],T,1).*(vec(XIndexData) .== j)) for j∈eachindex(X), s∈eachindex(S)];
 
 iter=1;
@@ -237,6 +275,6 @@ while cond==0 && iter<=max_iter
     end
 end
 
-println(theta_0)
-println(pi_0)
+println(string("θ_1, θ_2, θ_3 estimated to:",round.(theta_0,digits=3)))
+println(string("π_1 estimated to:",round.(pi_0,digits=3)))
 
