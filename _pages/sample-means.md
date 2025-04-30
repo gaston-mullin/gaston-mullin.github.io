@@ -1,6 +1,6 @@
 ---
 layout: archive
-title: "Interactive: Sample Means of Normal Distribution"
+title: "Sample means across simulation of revisited birthday paradox"
 permalink: /sample-means/
 author_profile: true
 ---
