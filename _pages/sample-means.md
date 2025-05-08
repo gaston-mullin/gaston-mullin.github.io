@@ -1,6 +1,6 @@
 ---
 layout: archive
-title: "Sample means across simulation of revisited birthday paradox"
+title: "Probability birthday paradox"
 permalink: /sample-means/
 author_profile: true
 ---
