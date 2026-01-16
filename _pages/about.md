@@ -8,8 +8,6 @@ redirect_from:
   - /about.html
 ---
 
-Welcome to my website!
+Soy economista. Tengo interés en economía laboral, modelos de econometría estructural y en la enseñanza de matemática y economía.
 
-I'm an economist with an interest in structural econometrics and labour economics.
-
-You can find here the materials for the [workshop in Structural Econometrics here](/KU_Leuven).
+Materiales para el [workshop in Structural Econometrics aquí](/KU_Leuven).
